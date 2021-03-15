@@ -1,6 +1,7 @@
 import re
 import argparse
 import subprocess
+import os
 
 def parse_text(text):
     # Pretty regex found on stackoverflow (where else)
@@ -15,16 +16,19 @@ def parse_file(filename):
     return parse_text(text)
 
 def download_links(links, extract_audio=False):
+    with open("tmp.txt", "w") as f: 
+        for link in links:
+            f.write(link)
+            f.write("\n")
+    
     commands = ["youtube-dl \"" + link + "\"" for link in links]
     if extract_audio:
-        commands = [command + " -x --audio-format mp3" for command in commands]
-    print("Running: ")
-    for command in commands:
-        print("\t" + command)
+        commands = [command + " -x --audio-format mp3 --no-playlist" for command in commands]
 
-    for i, command in enumerate(commands):
-        print(f'{i+1} / {len(commands)}')
-        ret = subprocess.call(command, shell=True)
+    command = f'youtube-dl -a tmp.txt -x --audio-format mp3 --no-playlist -o "%(autonumber)s - %(title)s-%(id)s.%(ext)s"'
+    ret = subprocess.call(command, shell=True)
+
+    os.remove("tmp.txt")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -37,7 +41,6 @@ def main():
     parser.add_argument('--extract-audio', '-x', action='store_true', help='Convert video files to audio-only files (requires ffmpeg/avconv and ffprobe/avprobe)')
     
     args = parser.parse_args()
-    print(args)
 
     links = parse_file(args.filename)
     download_links(links, args.extract_audio)
